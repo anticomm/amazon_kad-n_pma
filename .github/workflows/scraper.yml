@@ -1,0 +1,45 @@
+name: Amazon Elektronik Scraper
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'  # Her 5 dakikada bir çalışır
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  run-scraper:
+    runs-on: ubuntu-latest
+
+    env:
+      BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+      CHAT_ID: ${{ secrets.CHAT_ID }}
+      COOKIE_B64: ${{ secrets.COOKIE_B64 }}
+
+    steps:
+      - name: Repo'yu klonla
+        uses: actions/checkout@v3
+
+      - name: Python ortamını kur
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Bağımlılıkları yükle
+        run: pip install -r requirements.txt
+
+      - name: Cookie dosyasını oluştur
+        run: |
+          echo "${{ secrets.COOKIE_B64 }}" | base64 -d > cookie_cep.json
+
+      - name: Scraper'ı çalıştır
+        run: python amazon_cep.py
+
+      - name: Değişiklikleri commit et ve pushla
+        run: |
+          git config --global user.name "github-actions"
+          git config --global user.email "actions@github.com"
+          git add send_products.txt
+          git commit -m "Fiyat güncellemesi: send_products.txt" || echo "⏩ Değişiklik yok, commit atlanıyor"
+          git push
