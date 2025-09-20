@@ -15,6 +15,7 @@ from telegram_cep import send_message
 URL = "https://www.amazon.com.tr/s?i=fashion&rh=n%3A12466553031%2Cp_36%3A-140000%2Cp_6%3AA1IREBQAVXLMLM%257CA1UNQM1SR2CHM%257CA1WXSNTVWP8CEC%2Cp_n_g-1004158520091%3A13681797031%257C13681798031%2Cp_123%3A256097&s=price-asc-rank&dc&fs=true&ds=v1%3AQ2cBzvuOy0n4jVgslJ%2FHDtnEb%2F2wyPNourxZmWFkr2s&_encoding=UTF8&xpid=n7NTWwlGvZlym"
 COOKIE_FILE = "cookie_cep.json"
 SENT_FILE = "send_products.txt"
+MAX_PRICE = 1350.0  # TL cinsinden üst fiyat sınırı
 
 def decode_cookie_from_env():
     cookie_b64 = os.getenv("COOKIE_B64")
@@ -127,14 +128,21 @@ def run():
         try:
             asin = item.get_attribute("data-asin")
             title = item.find_element(By.CSS_SELECTOR, "img.s-image").get_attribute("alt").strip()
-            price = extract_price(item)
+            price_text = extract_price(item)
+
+            # Fiyatı sayıya çevir ve sınırı kontrol et
+            price_clean = price_text.replace("TL", "").replace(".", "").replace(",", ".").strip()
+            price_value = float(price_clean) if price_clean.replace(".", "").isdigit() else None
+            if price_value is None or price_value > MAX_PRICE:
+                continue  # fiyat alınamadı veya sınırı aşıyor
+
             image = item.find_element(By.CSS_SELECTOR, "img.s-image").get_attribute("src")
             link = item.find_element(By.CSS_SELECTOR, "a.a-link-normal").get_attribute("href")
 
             products.append({
                 "asin": asin,
                 "title": title,
-                "price": price,
+                "price": price_text,
                 "image": image,
                 "link": link
             })
