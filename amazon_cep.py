@@ -11,7 +11,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from webdriver_manager.chrome import ChromeDriverManager
 from telegram_cep import send_message
 
-URL = "https://www.amazon.com.tr/s?i=fashion&rh=n%3A12466553031%2Cp_36%3A-140000%2Cp_6%3AA1IREBQAVXLMLM%257CA1UNQM1SR2CHM%257CA1WXSNTVWP8CEC%2Cp_n_g-1004158520091%3A13681797031%257C13681798031%2Cp_123%3A256097&s=price-asc-rank&dc&fs=true&ds=v1%3AQ2cBzvuOy0n4jVgslJ%2FHDtnEb%2F2wyPNourxZmWFkr2s&_encoding=UTF8&xpid=n7NTWwlGvZlym"
+URL = "https://www.amazon.com.tr/s?k=yaz%C4%B1c%C4%B1&i=warehouse-deals&srs=44219324031&bbn=44219324031&rh=n%3A44219324031%2Cn%3A12601910031&dc&ds=v1%3ASmRQqwXhK%2FdZ%2FZYlYfFeOyFvytObwzoWIbH9%2Fvfy334&__mk_tr_TR=%C3%85M%C3%85%C5%BD%C3%95%C3%91"
 COOKIE_FILE = "cookie_cep.json"
 SENT_FILE = "send_products.txt"
 
@@ -104,14 +104,9 @@ def load_sent_data():
                     data[asin.strip()] = price.strip()
     return data
 
-def save_sent_data(products_to_send):
-    existing = load_sent_data()
-    for product in products_to_send:
-        asin = product['asin'].strip()
-        price = product['price'].strip()
-        existing[asin] = price
+def save_sent_data(updated_data):
     with open(SENT_FILE, "w", encoding="utf-8") as f:
-        for asin, price in existing.items():
+        for asin, price in updated_data.items():
             f.write(f"{asin} | {price}\n")
 
 def run():
@@ -179,23 +174,28 @@ def run():
         if asin in sent_data:
             old_price = sent_data[asin]
             try:
-               old_val = float(old_price.replace("TL", "").replace(".", "").replace(",", ".").strip())
-               new_val = float(price.replace("TL", "").replace(".", "").replace(",", ".").strip())    
-               if new_val < old_val:
-                   print(f"📉 Fiyat düştü: {product['title']} → {old_price} → {price}")
-                   products_to_send.append(product)
-               else:
-                   print(f"⏩ Fiyat yükseldi veya aynı: {product['title']} → {old_price} → {price}")
+                old_val = float(old_price.replace("TL", "").replace(".", "").replace(",", ".").strip())
+                new_val = float(price.replace("TL", "").replace(".", "").replace(",", ".").strip())
+                if new_val < old_val:
+                    print(f"📉 Fiyat düştü: {product['title']} → {old_price} → {price}")
+                    product["old_price"] = old_price
+                    products_to_send.append(product)
+                else:
+                    print(f"⏩ Fiyat yükseldi veya aynı: {product['title']} → {old_price} → {price}")
+                # Her durumda son fiyatı güncelle
+                sent_data[asin] = price
             except:
                 print(f"⚠️ Fiyat karşılaştırılamadı: {product['title']} → {old_price} → {price}")
+                sent_data[asin] = price
         else:
             print(f"🆕 Yeni ürün: {product['title']}")
             products_to_send.append(product)
+            sent_data[asin] = price
 
     if products_to_send:
         for p in products_to_send:
             send_message(p)
-        save_sent_data(products_to_send)
+        save_sent_data(sent_data)
         print(f"📁 Dosya güncellendi: {len(products_to_send)} ürün eklendi/güncellendi.")
     else:
         print("⚠️ Yeni veya indirimli ürün bulunamadı.")
