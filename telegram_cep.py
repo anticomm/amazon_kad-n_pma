@@ -4,6 +4,7 @@ import requests
 def format_product_message(product):
     title = product.get("title", "🛍️ Ürün adı bulunamadı")
     price = product.get("price", "Fiyat alınamadı")
+    old_price = product.get("old_price", "")  # 👈 Yeni satır
     link = product.get("link", "#")
     discount = product.get("discount", "")
     rating = product.get("rating", "")
@@ -12,18 +13,28 @@ def format_product_message(product):
 
     if "TL" not in price:
         price = f"{price} TL"
+    if old_price and "TL" not in old_price:
+        old_price = f"{old_price} TL"
 
     indirimbilgi = f"%{discount}" if discount and discount.isdigit() else ""
     stars = f"⭐ {rating}" if rating else ""
     renkler = ", ".join([c["color"] for c in colors]) if colors else ""
     teknik = "\n".join([f"▫️ {spec}" for spec in specs]) if specs else ""
 
+    if old_price and old_price != price:
+        fiyat_bilgisi = (
+            f"🔻 *Eski fiyat:* *{old_price}*\n"
+            f"💰 *Yeni fiyat:* *{price}*"
+        )
+    else:
+        fiyat_bilgisi = f"💰 *{price}*"
+
     return (
         f"*{title}*\n"
         f"{indirimbilgi}  {stars}\n"
         f"{teknik}\n"
         f"{f'🎨 Renkler: {renkler}' if renkler else ''}\n"
-        f"💰 *{price}*\n"
+        f"{fiyat_bilgisi}\n"
         f"🔗 [🔥🔥 FIRSATA GİT 🔥🔥]({link})"
     )
 
